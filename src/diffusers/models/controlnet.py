@@ -364,7 +364,7 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         output_channel = block_out_channels[0]
 
         controlnet_block = nn.Conv2d(output_channel, output_channel, kernel_size=1)
-        controlnet_block = zero_module(controlnet_block)
+        controlnet_block = zero_module(controlnet_block)  # zero convolution.
         self.controlnet_down_blocks.append(controlnet_block)
 
         for i, down_block_type in enumerate(down_block_types):

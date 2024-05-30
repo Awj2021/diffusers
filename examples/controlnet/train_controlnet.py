@@ -12,7 +12,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-
+import ipdb
 import argparse
 import contextlib
 import gc
@@ -21,7 +21,8 @@ import math
 import os
 import random
 import shutil
-from pathlib import Path
+from pathlib import Path  # This package seems useful.
+import cv2
 
 import accelerate
 import numpy as np
@@ -468,6 +469,7 @@ def parse_args(input_args=None):
             " or to a folder containing files that 🤗 Datasets can understand."
         ),
     )
+    # TODO: the format of data config file.
     parser.add_argument(
         "--dataset_config_name",
         type=str,
@@ -617,19 +619,29 @@ def make_train_dataset(args, tokenizer, accelerator):
             cache_dir=args.cache_dir,
         )
     else:
+        # if args.train_data_dir is not None:
+        #     dataset = load_dataset(
+        #         args.train_data_dir,
+        #         cache_dir=args.cache_dir,
+        #     )
         if args.train_data_dir is not None:
+            # Load a dataset from a local directory.
             dataset = load_dataset(
-                args.train_data_dir,
+                "json",
+                data_files=args.train_data_dir,
                 cache_dir=args.cache_dir,
             )
         # See more about loading custom images at
         # https://huggingface.co/docs/datasets/v2.0.0/en/dataset_script
-
+    
+    # dataset = load_dataset('json', data_files='./data/fill50k/prompt.json')
     # Preprocessing the datasets.
     # We need to tokenize inputs and targets.
-    column_names = dataset["train"].column_names
-
+    column_names = dataset["train"].column_names # what are the column names?
+    
+    # image_column, caption_column, conditioning_image_column -> image_name, text, condition.
     # 6. Get the column names for input/target.
+    # ipdb.set_trace()
     if args.image_column is None:
         image_column = column_names[0]
         logger.info(f"image column defaulting to {image_column}")
@@ -697,10 +709,11 @@ def make_train_dataset(args, tokenizer, accelerator):
     )
 
     def preprocess_train(examples):
-        images = [image.convert("RGB") for image in examples[image_column]]
+        # ipdb.set_trace()
+        images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[image_column]]
         images = [image_transforms(image) for image in images]
 
-        conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
+        conditioning_images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[conditioning_image_column]]
         conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
 
         examples["pixel_values"] = images
@@ -825,6 +838,7 @@ def main(args):
 
     # `accelerate` 0.16.0 will have better support for customized saving
     if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
+        # TODO: what's the hooks for?
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
@@ -858,7 +872,7 @@ def main(args):
     unet.requires_grad_(False)
     text_encoder.requires_grad_(False)
     controlnet.train()
-
+    # TODO: what's the xformers memory efficient attention?
     if args.enable_xformers_memory_efficient_attention:
         if is_xformers_available():
             import xformers
@@ -1082,6 +1096,7 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+                # The loss function is the mean squared error between the predicted noise and the target noise.
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
                 accelerator.backward(loss)

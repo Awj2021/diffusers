@@ -23,6 +23,7 @@ from .activations import get_activation
 from .attention_processor import Attention
 
 
+# TODO: the priciple of the following functions.
 def get_timestep_embedding(
     timesteps: torch.Tensor,
     embedding_dim: int,
@@ -36,8 +37,9 @@ def get_timestep_embedding(
 
     :param timesteps: a 1-D Tensor of N indices, one per batch element.
                       These may be fractional.
-    :param embedding_dim: the dimension of the output. :param max_period: controls the minimum frequency of the
-    embeddings. :return: an [N x dim] Tensor of positional embeddings.
+    :param embedding_dim: the dimension of the output. 
+    :param max_period: controls the minimum frequency of the embeddings. 
+    :return: an [N x dim] Tensor of positional embeddings.
     """
     assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array"
 
