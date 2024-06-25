@@ -128,8 +128,28 @@ def log_validation(
     image_logs = []
     inference_ctx = contextlib.nullcontext() if is_final_validation else torch.autocast("cuda")
 
+    def HWC3(x):
+        assert x.dtype == np.uint8
+        if x.ndim == 2:
+            x = x[:, :, None]
+        assert x.ndim == 3
+        H, W, C = x.shape
+        assert C == 1 or C == 3 or C == 4
+        if C == 3:
+            return x
+        if C == 1:
+            return np.concatenate([x, x, x], axis=2)
+        
     for validation_prompt, validation_image in zip(validation_prompts, validation_images):
-        validation_image = Image.open(validation_image).convert("RGB")
+        # validation_image = Image.open(validation_image).convert("RGB")
+        # TODO: firstly generate more canny images with .jpg format.
+        if validation_image.endswith(".npy"):
+            validation_image = HWC3(np.load(validation_image))
+            validation_image = Image.fromarray(validation_image)
+        elif validation_image.endswith(".jpg"):
+            validation_image = Image.open(validation_image).convert("RGB")
+        else:
+            raise ValueError(f"Unsupported image format: {validation_image}")
 
         images = []
 
@@ -565,6 +585,14 @@ def parse_args(input_args=None):
         ),
     )
 
+    parser.add_argument(
+        "--dataset_folder",
+        type=str,
+        default="./data",
+        help="The folder where the dataset is stored. Defaults to `./data`."
+    )
+
+
     if input_args is not None:
         args = parser.parse_args(input_args)
     else:
@@ -627,7 +655,7 @@ def make_train_dataset(args, tokenizer, accelerator):
         if args.train_data_dir is not None:
             # Load a dataset from a local directory.
             dataset = load_dataset(
-                "json",
+                "csv",
                 data_files=args.train_data_dir,
                 cache_dir=args.cache_dir,
             )
@@ -708,13 +736,30 @@ def make_train_dataset(args, tokenizer, accelerator):
         ]
     )
 
+    def HWC3(x):
+        assert x.dtype == np.uint8
+        if x.ndim == 2:
+            x = x[:, :, None]
+        assert x.ndim == 3
+        H, W, C = x.shape
+        assert C == 1 or C == 3 or C == 4
+        if C == 3:
+            return x
+        if C == 1:
+            return np.concatenate([x, x, x], axis=2)
+
     def preprocess_train(examples):
         # ipdb.set_trace()
-        images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[image_column]]
+        # images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[image_column]]
+        images = [Image.open(os.path.join(args.dataset_folder, image)).convert("RGB") for image in examples[image_column]]
         images = [image_transforms(image) for image in images]
 
-        conditioning_images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[conditioning_image_column]]
-        conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
+        # conditioning_images = [Image.open(os.path.join('./data/fill50k', image)).convert("RGB") for image in examples[conditioning_image_column]]
+        # conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
+
+        conditioning_images = [np.load(os.path.join(args.dataset_folder, image[:-4] + '.npy')) for image in examples[conditioning_image_column]]
+        conditioning_images = [HWC3(image) for image in conditioning_images]
+        conditioning_images = [conditioning_image_transforms(Image.fromarray(image)) for image in conditioning_images]
 
         examples["pixel_values"] = images
         examples["conditioning_pixel_values"] = conditioning_images
