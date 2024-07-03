@@ -588,7 +588,7 @@ def parse_args(input_args=None):
     parser.add_argument(
         "--dataset_folder",
         type=str,
-        default="./data",
+        default="./data/chaoyang",
         help="The folder where the dataset is stored. Defaults to `./data`."
     )
 

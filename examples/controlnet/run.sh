@@ -1,5 +1,6 @@
 CUDA_VISIBLE_DEVICES=0,1 accelerate launch train_controlnet.py \
  --pretrained_model_name_or_path="runwayml/stable-diffusion-v1-5" \
+ --resume_from_checkpoint="latest" \
  --output_dir="./controlnet_quilt1m_256" \
  --cache_dir="./cache" \
  --train_data_dir='./data/quilt_1M_prompt_256.csv' \
@@ -22,6 +23,7 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch train_controlnet.py \
  --proportion_empty_prompts=0.2 \
  --report_to wandb \
  --hub_model_id "controlnet_quilt1m_256" \
+ --dataset_folder "./data" \
  --push_to_hub 
 #  --validation_image "source/0.png" "source/1.png" source/2.png \
 #  --validation_ompt "pale golden rod circle with old lace background" "light coral circle with white background" "light coral circle with white background" \

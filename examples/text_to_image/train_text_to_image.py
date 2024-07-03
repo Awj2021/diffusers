@@ -498,6 +498,16 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--dataset_folder",
+        type=str,
+        default=None,
+        help=(
+            "The folder containing the dataset. Folder contents must follow the structure described in"
+            " https://huggingface.co/docs/datasets/image_dataset#imagefolder. Ignored if `dataset_name` is specified."
+        ),
+    )
+
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
     if env_local_rank != -1 and env_local_rank != args.local_rank:
